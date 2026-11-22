@@ -146,11 +146,13 @@ ecommerce/
 
 _Add screenshots of your store here, for example:_
 
-<!--
+
 ![Home page](screenshots/home.png)
 ![Product page](screenshots/product.png)
 ![Cart](screenshots/cart.png)
--->
+![CheckOut](screenshots/checkout.png)
+![SignUp](screenshots/signup.png)
+
 
 ## Possible improvements
 
