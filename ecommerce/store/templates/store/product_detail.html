@@ -1,0 +1,295 @@
+{% extends 'store/main.html' %} {% load static %} {% block content %}
+
+<div class="container mt-4">
+  <div class="row">
+    <!-- Left side: Product images -->
+    <div class="col-md-6">
+      <!-- Main product image -->
+      <img 
+      id= "mainProductImage"
+      src="{{ main_image.url|default_if_none:'/static/images/placeholder.png' }}"
+      class= "main-product-img mb-3 rounded shadow"
+      alt="{{ product.name }}"
+      style= "cursor: zoom-in"
+      />
+      <!-- Extra images gallery -->
+      {% if extra_images %}
+      <div id="thumbnailsWrapper" class="d-flex flex-wrap gap-2">
+        {% if main_image %}
+        <img 
+        src= "{{ main_image.url }}"
+        class="img-thumbnail product-thumbnail active-thumb" 
+        style="width: 100px; height: 100px; object-fit: cover; cursor: pointer;"
+        alt= "{{ product.name }} main image"
+        />
+        {% endif %}
+
+        {% for img in extra_images %}
+        <img
+          src="{{ img.image.url }}"
+          class="img-thumbnail product-thumbnail"
+          style="
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            cursor: pointer;
+          "
+          alt="Extra image for {{ product.name }}"
+        />
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right side: Product info -->
+    <div class="col-md-6">
+      <h2 class="d-flex flex-column justify-content-between align-items-start">
+        <strong>{{ product.name }}</strong>
+        <span id="stock-msg-detail" class="stock-error-msg"></span>
+      </h2>
+      <h4
+        id="product-price"
+        data-base-price="{{ product.price|floatformat:2 }}"
+      >
+        ${{ product.price|floatformat:2 }}
+      </h4>
+      <p class="mt-3">
+        {{ product.description|default:"No description available." }}
+      </p>
+      {% if has_variants %}
+      <div class="mt-3">
+        <h5>Color:</h5>
+        {% for c in colors %}
+        <button
+          class="btn btn-sm btn-outline-dark select-color"
+          data-color="{{ c }}"
+        >
+          {{ c }}
+        </button>
+        {% endfor %}
+      </div>
+
+      <div class="mt-3">
+        <h5>Size:</h5>
+        {% for s in sizes %}
+        <button
+          class="btn btn-sm btn-outline-dark select-size"
+          data-size="{{ s }}"
+        >
+          {{ s }}
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <!-- Add to cart button -->
+      <button
+        data-product="{{ product.id }}"
+        data-variant=""
+        data-action="add"
+        class="btn btn-outline-dark rounded update-cart mt-2"
+        {%
+        if
+        has_variants
+        %}
+        disabled
+        {%
+        endif
+        %}
+      >
+        Add to Cart
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox HTML -->
+<div id="lightbox" class="lightbox">
+  <span class="lightbox-close">&times;</span>
+  <div class="lightbox-inner">
+    <img class="lightbox-content" id="lightboxImage" />
+    <div id="lightboxThumbnails" class="d-flex flex-wrap gap-2 mt-3"></div>
+  </div>
+</div>
+
+<!-- JS for swap + lightbox -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const mainImage = document.getElementById("mainProductImage");
+    const thumbnailsWrapper = document.getElementById("thumbnailsWrapper");
+    let thumbnails = document.querySelectorAll(".product-thumbnail");
+
+    function attachThumbnailEvents() {
+      thumbnails.forEach((thumb) => {
+        thumb.onclick = function () {
+        
+
+          // Swap images
+          //const oldMainSrc = mainImage.src;
+          mainImage.src = this.src;
+          //this.src = oldMainSrc;
+          
+          // Remove active class from all
+          thumbnails.forEach((t) => t.classList.remove("active-thumb"));
+          // Add active class to clicked
+          this.classList.add("active-thumb");
+        };
+      });
+    }
+
+    attachThumbnailEvents();
+
+    // Lightbox setup
+    const lightbox = document.getElementById("lightbox");
+    const lightboxImg = document.getElementById("lightboxImage");
+    const closeBtn = document.querySelector(".lightbox-close");
+
+    mainImage.addEventListener("click", function () {
+      lightbox.style.display = "flex";
+      lightboxImg.src = this.src;
+    
+      // 🧩 Clone the thumbnails into the lightbox
+      const thumbsContainer = document.getElementById("thumbnailsWrapper");
+      const lightboxThumbs = document.getElementById("lightboxThumbnails");
+      lightboxThumbs.innerHTML = ""; // clear old ones
+    
+      if (thumbsContainer) {
+        thumbsContainer.querySelectorAll("img").forEach((thumb) => {
+          const clone = thumb.cloneNode(true); // make a copy
+          clone.style.width = "80px";
+          clone.style.height = "80px";
+          clone.style.cursor = "pointer";
+          clone.onclick = function () {
+            lightboxImg.src = this.src; // swap image in lightbox
+          };
+          lightboxThumbs.appendChild(clone);
+        });
+      }
+    });
+    
+
+    closeBtn.addEventListener("click", function () {
+      lightbox.style.display = "none";
+    });
+
+    lightbox.addEventListener("click", function (e) {
+      if (e.target === lightbox) {
+        lightbox.style.display = "none";
+      }
+    });
+  });
+  // variant selection
+</script>
+<!-- Embed variants as JSON safely -->
+<script id="variants-data" type="application/json">
+  {{ variants|safe }}
+</script>
+
+<script>
+    // Parse variants JSON embedded by template
+  let variants = [];
+  try {
+    variants = JSON.parse(document.getElementById("variants-data").textContent) || [];
+  } catch (e) {
+    console.warn("Could not parse variants JSON:", e);
+    variants = [];
+    }
+    let selectedColor = null;
+    let selectedSize = null;
+    let addBtn = document.querySelector(".update-cart");
+    let priceElem = document.getElementById("product-price");
+
+    // If no variants exist, enable Add to Cart immediately
+    if (variants.length === 0) {
+      if (addBtn) {
+        addBtn.disabled = false;
+        addBtn.dataset.variant = ""; // no variant id
+      }
+      // Ensure price shows base price (it already should)
+    }
+
+    // Attach handlers only if color/size buttons exist
+    document.querySelectorAll(".select-color").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        if (this.classList.contains("active")) {
+          this.classList.remove("active");
+          selectedColor = null;
+        } else {
+          selectedColor = this.dataset.color;
+          document.querySelectorAll(".select-color").forEach((b) => b.classList.remove("active"));
+          this.classList.add("active");
+        }
+        checkVariant();
+      });
+    });
+
+    document.querySelectorAll(".select-size").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        if (this.classList.contains("active")) {
+          this.classList.remove("active");
+          selectedSize = null;
+        } else {
+          selectedSize = this.dataset.size;
+          document.querySelectorAll(".select-size").forEach((b) => b.classList.remove("active"));
+          this.classList.add("active");
+        }
+        checkVariant();
+      });
+    });
+
+    function checkVariant() {
+      // if no variants, keep Add button enabled (handled above)
+      if (variants.length === 0) return;
+
+      const basePrice = parseFloat(priceElem.dataset.basePrice) || parseFloat(priceElem.innerText.replace(/[^0-9.-]+/g,"")) || 0;
+
+      // need both color and size to find a variant
+      if (selectedColor && selectedSize) {
+        let match = variants.find(
+          (v) => String(v.color) === String(selectedColor) && String(v.size) === String(selectedSize)
+        );
+
+        if (match) {
+          addBtn.dataset.variant = match.id;
+          addBtn.disabled = false;
+          priceElem.innerText = "$" + parseFloat(match.price).toFixed(2);
+          console.log("✅ Variant selected:", match);
+        } else {
+          addBtn.dataset.variant = "";
+          addBtn.disabled = true;
+          priceElem.innerText = "Not available";
+          console.warn("❌ No variant found for:", selectedColor, selectedSize);
+        }
+      } else {
+        addBtn.dataset.variant = "";
+        addBtn.disabled = true; // require both selections when variants exist
+        priceElem.innerText = "$" + basePrice.toFixed(2);
+        console.log("🔁 Reset back to base price");
+      }
+    }
+
+    // Reset selection after Add to Cart (keeps existing behavior)
+    if (addBtn) {
+      addBtn.addEventListener("click", function () {
+        // Only reset selection if variants exist; for no-variant products we may not want to reset UI
+        selectedColor = null;
+        selectedSize = null;
+
+        document.querySelectorAll(".select-color").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".select-size").forEach((b) => b.classList.remove("active"));
+
+        // If this product has no variants, keep button enabled (user may add again)
+        if (variants.length > 0) {
+          addBtn.disabled = true;
+        }
+
+        // Reset price back to original product price
+        if (priceElem) {
+          const base = parseFloat(priceElem.dataset.basePrice) || {{ product.price|floatformat:2 }};
+          priceElem.innerText = "$" + parseFloat(base).toFixed(2);
+        }
+
+        console.log("🧹 Selection reset after adding to cart");
+      });
+    }
+</script>
+{% endblock content %}

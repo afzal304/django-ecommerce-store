@@ -1,0 +1,11 @@
+Ecommerce_dev/
+__pycache__/
+*.pyc
+db.sqlite3
+all_code.txt
+*.docx
+~$*
+.env
+.vscode/
+.vscode/
+.vscode/

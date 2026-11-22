@@ -1,0 +1,128 @@
+{% extends 'store/main.html' %}
+{% load static %}
+{% block content %}
+<div class="row">
+  <div class="col-lg-12">
+    <div class="box-element">
+      <a class="btn btn-outline-dark" href="{% url 'store' %}">
+        &#x2190; Continue shopping
+      </a>
+      <br><br>
+      
+      <table class="table">
+        <tr>
+          <th>
+            <h5>
+              Items: <strong id="cart-items-count">{{ order.get_cart_items|default:0 }}</strong>
+            </h5>
+          </th>
+          <th>
+            <h5>
+              Total: <strong id="cart-total-price">${{ order.get_cart_total|default:0|floatformat:2 }}</strong>
+            </h5>
+          </th>
+          <th>
+            <a id="checkoutBtn" style="float: right; margin: 5px" class="btn btn-outline-dark" href="#">
+              Checkout
+            </a>
+            <p id="checkout-msg" class=" mt-2" style="font-weight: bold; color:hsl(0, 0%, 30%);"></p>
+            
+          </th>
+        </tr>
+      </table>
+    </div>
+
+    <br>
+
+    <div class="box-element">
+      <div class="cart-row fw-bold">
+        <div style="flex: 2"></div>
+        <div style="flex: 2">Item</div>
+        <div style="flex: 1">Price</div>
+        <div style="flex: 1">Quantity</div>
+        <div style="flex: 1">Total</div>
+      </div>
+
+      {% for item in items %}
+      <div class="cart-row" id="cart-row-{% if item.variant %}variant-{{ item.variant.id }}{% else %}product-{{ item.product.id }}{% endif %}">
+        <div style="flex: 2">
+          <img class="row-image" src="{{ item.product.imageURL }}" alt="{{ item.product.name }}">
+        </div>
+        <div style="flex: 2">
+          <p>{{ item.product.name }}</p>
+          {% if item.variant %}
+          <small class="text-muted">
+            Color: {{ item.variant.color }} | Size: {{ item.variant.size }}
+          </small>
+          {% endif %}
+        </div>
+        <div style="flex: 1">
+          <p>${{ item.unit_price|floatformat:2 }}</p>
+        </div>
+        <div style="flex: 1">
+          <p class="quantity" id="qty-{% if item.variant %}variant-{{ item.variant.id }}{% else %}product-{{ item.product.id }}{% endif %}">
+            {{ item.quantity }}
+          </p>
+          <div class="quantity">
+            <img
+              data-product="{{ item.product.id }}"
+              {% if item.variant %}data-variant="{{ item.variant.id }}"{% endif %}
+              data-action="add"
+              class="chg-quantity update-cart"
+              src="{% static 'images/arrow-up.png' %}"
+              alt="Increase"
+            />
+            <img
+              data-product="{{ item.product.id }}"
+              {% if item.variant %}data-variant="{{ item.variant.id }}"{% endif %}
+              data-action="remove"
+              class="chg-quantity update-cart"
+              src="{% static 'images/arrow-down.png' %}"
+              alt="Decrease"
+            />
+          </div>
+        </div>
+        <div style="flex: 1" id="item-total-{% if item.variant %}variant-{{ item.variant.id }}{% else %}product-{{ item.product.id }}{% endif %}">
+          ${{ item.get_total|floatformat:2 }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<script>
+  document.getElementById("checkoutBtn").addEventListener("click", function() {
+    fetch("{% url 'checkout' %}", {
+      method: "GET",
+      headers: {
+        "X-Custom-Request": "fetch-checkout"  // 👈 custom header
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      const msg = document.getElementById("checkout-msg");
+  
+      if (data.status === "error") {
+        // Cart empty → show message for 3 seconds
+        msg.textContent = data.message;
+        msg.style.display = "block";
+        setTimeout(() => msg.textContent = "", 3000);
+      } else {
+        // If cart not empty, go to checkout page
+        window.location.href = "{% url 'checkout' %}";
+      }
+    })
+    .catch(error => console.error("Error:", error));
+  });
+
+   // Hide message after 3 seconds
+   setTimeout(() => {
+    const msgBox = document.getElementById("cart-message-box");
+    if (msgBox) {
+      msgBox.style.transition = "opacity 0.5s ease";
+      msgBox.style.opacity = "0";
+      setTimeout(() => msgBox.remove(), 500);
+    }
+  }, 3000);
+</script>
+{% endblock content %}

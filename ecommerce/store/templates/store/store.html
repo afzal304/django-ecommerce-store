@@ -1,0 +1,33 @@
+{% extends 'store/main.html' %}
+{% load static %}
+{% block content %}
+<div class="row">
+  {% for product in products %}
+  <div class="col-lg-4">
+    <a href="{% url 'product_detail' product.id %}">
+      <img class="thumbnail" src="{{product.imageURL}}" alt="{{product.name}}" />
+    </a>
+    <div class="box-element product">
+      <h6 class="d-flex justify-content-between align-items-center">
+        <strong>{{product.name}}</strong>
+        <span id="stock-msg-{{ product.id }}" class="stock-error-msg"></span>
+      </h6>
+      <hr />
+      {% if product.has_variants %}
+        <a href="{% url 'product_detail' product.id %}" class="btn btn-outline add-btn choose-option rounded-3">
+          Choose Option
+        </a>
+      {% else %}
+        <button data-product="{{product.id}}" data-action="add" class="btn btn-outline add-btn update-cart rounded-3">
+        Add to Cart
+        </button>
+      {% endif %}
+      <a href="{% url 'product_detail' product.id %}" class="btn btn-outline rounded-3 view-btn">View</a>
+      <h4 class="float-end">
+        <strong>${{product.price|floatformat:2}}</strong>
+      </h4>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock content %}
